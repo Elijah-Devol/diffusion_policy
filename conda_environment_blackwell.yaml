@@ -1,0 +1,72 @@
+# Diffusion Policy environment, adapted for Blackwell GPUs (sm_120: RTX 50-series).
+#
+# Differences from the upstream conda_environment.yaml:
+#   - REMOVED  cudatoolkit=11.6, pytorch=1.12.1, torchvision=0.13.1  (no sm_120 kernels)
+#   - REMOVED  pytorch3d=0.7.0                (only exists as a py39_cu116_pyt1121 build)
+#   - REMOVED  the `pytorch`, `pytorch3d`, `nvidia` channels
+#   - REMOVED  the whole `pip:` section       (installed manually, in order — see REPRODUCE.md)
+#   - REMOVED  pytorchvideo                   (declared upstream but never imported)
+#   - MOVED    diffusers -> the pip stage    (its conda pkg depends on `pytorch >=1.4`, which
+#              drags conda-forge pytorch 1.12.1 + cudatoolkit 11.8 back into the env)
+#   - REMOVED  accelerate, datasets          (same pytorch pull-in; neither is imported by the repo)
+#
+# EVERYTHING ELSE IS UNCHANGED AND MUST STAY THAT WAY:
+#   python=3.9    -> free-mujoco-py requires <3.11, and robosuite 1.2.0 needs mujoco-py
+#   gym=0.21.0    -> the codebase uses the 4-tuple step() API and vendors gym.vector forks
+#   numpy=1.23.3  -> numba 0.56.4 requires numpy<1.24, and numba is on the sampler hot path
+#
+# Torch is installed separately (see REPRODUCE.md step 3) because the cu128 wheels live on
+# a separate index and must not be resolved against the other pip packages.
+#
+# After `conda env create`, run IN THIS ORDER:
+#   pip install torch==2.8.0 torchvision==0.23.0 --index-url https://download.pytorch.org/whl/cu128
+#   pip install diffusers==0.11.1 'huggingface_hub<0.26'
+# The hub pin is required: diffusers 0.11.1 does
+#   `from huggingface_hub import ... cached_download ...`
+# and cached_download was removed in huggingface_hub 0.26.
+#
+# Usage:  conda env create -f conda_environment_blackwell.yaml      (creates env "dp")
+name: dp
+channels:
+  - conda-forge
+dependencies:
+  - python=3.9
+  - pip=22.2.2
+  - numpy=1.23.3
+  - numba==0.56.4
+  - scipy==1.9.1
+  - py-opencv=4.6.0
+  - cffi=1.15.1
+  - ipykernel=6.16
+  - matplotlib=3.6.1
+  - zarr=2.12.0
+  - numcodecs=0.10.2
+  - h5py=3.7.0
+  - hydra-core=1.2.0
+  - einops=0.4.1
+  - tqdm=4.64.1
+  - dill=0.3.5.1
+  - scikit-video=1.1.11
+  - scikit-image=0.19.3
+  - gym=0.21.0
+  - pymunk=6.2.1
+  - wandb=0.13.3
+  - threadpoolctl=3.1.0
+  - shapely=1.8.4
+  - cython=0.29.32
+  - imageio=2.22.0
+  - imageio-ffmpeg=0.4.7
+  - termcolor=2.0.1
+  - tensorboard=2.10.1
+  - tensorboardx=2.5.1
+  - psutil=5.9.2
+  - click=8.0.4
+  - boto3=1.24.96
+  - av=10.0.0
+  - cmake=3.24.3
+  # mujoco-py shells out to patchelf when it builds cymj; conda avoids needing sudo apt
+  - patchelf
+  # avoids the cpu-affinity bug in https://github.com/pytorch/pytorch/issues/99625
+  - llvm-openmp=14
+  # placeholder; force-reinstalled via pip to get the jpeg-xl codec
+  - imagecodecs==2022.8.8
